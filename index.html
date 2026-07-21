@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>방벽 수호전 - 슈팅 디펜스</title>
+  <!-- Google Fonts 적용 -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX 라이브러리 (수식 렌더링용) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Firebase App & Database (Compatibility Version) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+  <!-- 전체 게임 컨테이너 -->
+  <div id="game-container">
+    <!-- 게임 플레이 Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI 오버레이: 상단 인프라 정보 -->
+    <div id="hud">
+      <div class="hud-left">
+        <div id="shield-hp">
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+        </div>
+        <div id="timer-display">생존 시간: <span id="survival-time">0.0</span>초</div>
+        <!-- 라운드 수 실시간 HUD -->
+        <div id="round-hud">ROUND <span id="round-display">1</span></div>
+      </div>
+      <div class="hud-right">
+        <!-- 현재 적용 중인 버프 아이콘 표시기 -->
+        <div id="buff-indicator">
+          <div id="buff-stream" class="buff-badge locked">소인수분해 (줄기: +1)</div>
+          <div id="buff-speed" class="buff-badge locked">정수와 유리수 (공속: 2x 0s)</div>
+          <div id="buff-expr" class="buff-badge locked">일차식의 계산 (조수: 0s)</div>
+          <div id="buff-freeze" class="buff-badge locked">일차방정식 (빙결 0s)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 메인 메뉴 화면 -->
+    <div id="main-menu" class="overlay-screen active">
+      <div class="glow-bg"></div>
+      <h1 class="game-title">방벽 수호전</h1>
+      <p class="game-subtitle">수학의 정석을 쏘아 방벽을 수호하라</p>
+      
+      <div class="menu-content">
+        <div class="menu-left">
+          <div class="input-group">
+            <label for="player-name">수호자 닉네임</label>
+            <input type="text" id="player-name" placeholder="닉네임을 입력하세요" maxlength="8" value="Player1">
+          </div>
+          <button id="start-btn" class="glow-btn">수호 시작</button>
+          
+          <div class="instructions">
+            <h3>[ 조작 및 게임 방법 ]</h3>
+            <ul>
+              <li><strong>이동:</strong> 화면 하단을 터치 후 좌우 스와이프하거나 <strong>키보드 [A]/[D] 또는 [←]/[→] 방향키</strong>를 누르세요.</li>
+              <li><strong>전투:</strong> 미사일은 자동으로 12시 방향 발사됩니다. (1발당 피해 1 고정)</li>
+              <li><strong>좌측 레인:</strong> 거대 지네가 수평 왕복하며 경계 도달 시 아래로 툭 떨어집니다.</li>
+              <li><strong>라운드:</strong> 지네 몬스터 1마리 처치 시 다음 라운드가 시작되며 몬스터 체력/속도, 블록의 내구도가 10%씩 강해집니다.</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- 실시간 명예의 전당 TOP 5 -->
+        <div class="menu-right">
+          <div class="leaderboard-panel">
+            <h2>🏆 명예의 전당 (최장 생존)</h2>
+            <ul id="leaderboard-list">
+              <li>로딩 중...</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 퀴즈 팝업창 -->
+    <div id="quiz-popup" class="overlay-screen">
+      <div class="quiz-box">
+        <div class="quiz-header">
+          <span id="quiz-category">단원명</span>
+          <div id="quiz-timer">30초</div>
+        </div>
+        <div class="quiz-timer-bar-container">
+          <div id="quiz-timer-bar"></div>
+        </div>
+        <!-- LaTeX 렌더링 전용 컨테이너 -->
+        <div id="quiz-question-container">
+          <div id="quiz-question-text">문제를 불러오는 중...</div>
+          <div id="quiz-math-formula"></div>
+        </div>
+        
+        <!-- 입력 필드 -->
+        <div class="input-display" id="quiz-input-display">?</div>
+        
+        <!-- 가상 키패드 -->
+        <div class="keypad">
+          <button class="key-btn" data-key="1">1</button>
+          <button class="key-btn" data-key="2">2</button>
+          <button class="key-btn" data-key="3">3</button>
+          <button class="key-btn" data-key="4">4</button>
+          <button class="key-btn" data-key="5">5</button>
+          <button class="key-btn" data-key="6">6</button>
+          <button class="key-btn" data-key="7">7</button>
+          <button class="key-btn" data-key="8">8</button>
+          <button class="key-btn" data-key="9">9</button>
+          <button class="key-btn" data-key="-">-</button>
+          <button class="key-btn" data-key="0">0</button>
+          <button class="key-btn delete-btn" data-key="del">지우기</button>
+          <button class="key-btn pass-btn" id="pass-btn">패스</button>
+          <button class="key-btn confirm-btn" id="confirm-btn">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게임 오버 화면 -->
+    <div id="game-over" class="overlay-screen">
+      <div class="game-over-box">
+        <h1 class="danger-title animate-pulse">방벽이 무너졌습니다!</h1>
+        <p class="final-score-text">최종 생존 시간: <span id="final-score">0.0</span>초</p>
+        <button id="retry-btn" class="glow-btn">다시 수호하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
