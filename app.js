@@ -1123,6 +1123,237 @@ function gameLoop(timestamp) {
 // ==========================================================================
 // 11. 퀴즈 팝업 & 가상 키패드 관리 인터페이스 (KaTeX 동적 주입, 중복 방지, 홀수 라운드 난이도)
 // ==========================================================================
+function generateQuestionVariant(quiz) {
+  // 원래 퀴즈 구조 복사
+  const variant = { ...quiz };
+  
+  const primes = [2, 3, 5, 7];
+  const getRandomPrimes = (count) => {
+    const shuffled = [...primes].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, count);
+  };
+  
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  switch(quiz.id) {
+    case 1: { // 소인수 합
+      const pts = getRandomPrimes(2);
+      const p = pts[0], q = pts[1];
+      const a = randInt(1, 2), b = randInt(1, 2);
+      const n = Math.pow(p, a) * Math.pow(q, b);
+      variant.math = `${n}`;
+      variant.answer = p + q;
+      break;
+    }
+    case 2: { // 소인수 곱 계산
+      const pts = getRandomPrimes(2);
+      const p = pts[0], q = pts[1];
+      const a = randInt(1, 2), b = randInt(1, 2);
+      const n = Math.pow(p, a) * Math.pow(q, b);
+      const termP = a > 1 ? `${p}^${a}` : `${p}`;
+      const termQ = b > 1 ? `${q}^${b}` : `${q}`;
+      variant.math = `${termP} \\times ${termQ}`;
+      variant.answer = n;
+      break;
+    }
+    case 3: { // (-A) + (+B)
+      const a = randInt(2, 9);
+      const b = randInt(2, 9);
+      variant.math = `(-${a}) + (+${b})`;
+      variant.answer = -a + b;
+      break;
+    }
+    case 4: { // |-A| 절대값
+      const a = randInt(2, 15);
+      variant.math = `|-${a}|`;
+      variant.answer = a;
+      break;
+    }
+    case 5: { // Ax + Bx x계수
+      const a = randInt(2, 8);
+      const b = randInt(2, 8);
+      variant.math = `${a}x + ${b}x`;
+      variant.answer = a + b;
+      break;
+    }
+    case 6: { // A(Bx) x계수
+      const a = randInt(2, 5);
+      const b = randInt(2, 5);
+      variant.math = `${a}(${b}x)`;
+      variant.answer = a * b;
+      break;
+    }
+    case 7: { // x - A = B
+      const a = randInt(2, 12);
+      const b = randInt(2, 12);
+      variant.math = `x - ${a} = ${b}`;
+      variant.answer = b + a;
+      break;
+    }
+    case 8: { // Ax = B
+      const a = randInt(2, 6);
+      const ans = randInt(2, 7);
+      const b = a * ans;
+      variant.math = `${a}x = ${b}`;
+      variant.answer = ans;
+      break;
+    }
+    case 9: { // 소인수 개수
+      const count = randInt(2, 3);
+      const pts = getRandomPrimes(count);
+      let n = 1;
+      pts.forEach(p => {
+        n *= Math.pow(p, randInt(1, 2));
+      });
+      variant.math = `${n}`;
+      variant.answer = count;
+      break;
+    }
+    case 10: { // 약수 개수
+      const pts = getRandomPrimes(2);
+      const p = pts[0], q = pts[1];
+      const a = randInt(1, 3);
+      const b = randInt(1, 2);
+      const n = Math.pow(p, a) * Math.pow(q, b);
+      variant.math = `${n}`;
+      variant.answer = (a + 1) * (b + 1);
+      break;
+    }
+    case 11: { // (-A) * (-B) - C
+      const a = randInt(2, 7);
+      const b = randInt(2, 5);
+      const c = randInt(2, 12);
+      variant.math = `(-${a}) \\times (-${b}) - ${c}`;
+      variant.answer = a * b - c;
+      break;
+    }
+    case 12: { // A - (-B) * C
+      const a = randInt(5, 15);
+      const b = randInt(2, 5);
+      const c = randInt(2, 5);
+      variant.math = `${a} - (-${b}) \\times ${c}`;
+      variant.answer = a + b * c;
+      break;
+    }
+    case 13: { // Ax - B + C 상수항
+      const a = randInt(2, 7);
+      const b = randInt(3, 10);
+      const c = randInt(2, 9);
+      variant.math = `${a}x - ${b} + ${c}`;
+      variant.answer = -b + c;
+      break;
+    }
+    case 14: { // A(Bx + C) x계수
+      const a = randInt(2, 5);
+      const b = randInt(2, 5);
+      const c = randInt(1, 5);
+      variant.math = `${a}(${b}x + ${c})`;
+      variant.answer = a * b;
+      break;
+    }
+    case 15: { // Ax + B = C
+      const a = randInt(2, 6);
+      const ans = randInt(2, 8);
+      const b = randInt(1, 9);
+      const c = a * ans + b;
+      variant.math = `${a}x + ${b} = ${c}`;
+      variant.answer = ans;
+      break;
+    }
+    case 16: { // Ax = Bx + C
+      const diff = randInt(1, 4);
+      const b = randInt(2, 5);
+      const a = b + diff;
+      const ans = randInt(2, 8);
+      const c = diff * ans;
+      variant.math = `${a}x = ${b}x + ${c}`;
+      variant.answer = ans;
+      break;
+    }
+    case 17: { // 소인수들의 곱
+      const pts = getRandomPrimes(3);
+      const p = pts[0], q = pts[1], r = pts[2];
+      const n = p * q * r;
+      variant.math = `${n}`;
+      variant.answer = p * q * r;
+      break;
+    }
+    case 18: { // 제곱수 만들기 곱할 값
+      const pts = getRandomPrimes(2);
+      const p = pts[0], q = pts[1];
+      const a = randInt(1, 2) * 2 - 1; // 1 or 3
+      const b = randInt(1, 2) * 2; // 2 or 4
+      const n = Math.pow(p, a) * Math.pow(q, b);
+      variant.math = `${n} \\times a = b^2`;
+      variant.answer = p;
+      break;
+    }
+    case 19: { // (-A)^3 * B - (-C)
+      const a = randInt(2, 3);
+      const b = randInt(2, 4);
+      const c = randInt(3, 10);
+      const aPower = Math.pow(-a, 3);
+      variant.math = `(-${a})^3 \\times ${b} - (-${c})`;
+      variant.answer = aPower * b + c;
+      break;
+    }
+    case 20: { // ab = C, a = D 일 때 b
+      const a = randInt(2, 6) * (Math.random() > 0.5 ? 1 : -1);
+      const b = randInt(2, 7) * (Math.random() > 0.5 ? 1 : -1);
+      const c = a * b;
+      variant.math = `ab = ${c},\\; a = ${a}`;
+      variant.answer = b;
+      break;
+    }
+    case 21: { // (Ax - B) - (Cx - D) 상수항
+      const a = randInt(3, 8);
+      const b = randInt(3, 10);
+      const c = randInt(2, 6);
+      const d = randInt(2, 9);
+      variant.math = `(${a}x - ${b}) - (${c}x - ${d})`;
+      variant.answer = -b + d;
+      break;
+    }
+    case 22: { // A(x - B) - C(x + D) x계수
+      const a = randInt(3, 8);
+      const b = randInt(2, 5);
+      const c = randInt(1, a - 1);
+      const d = randInt(2, 5);
+      variant.math = `${a}(x - ${b}) - ${c}(x + ${d})`;
+      variant.answer = a - c;
+      break;
+    }
+    case 23: { // A(x - B) = Cx + D
+      const diff = randInt(1, 4);
+      const c = randInt(2, 6);
+      const a = c + diff;
+      const b = randInt(2, 5);
+      const ans = randInt(2, 8);
+      const d = diff * ans - a * b;
+      const sign = d >= 0 ? '+' : '-';
+      const absD = Math.abs(d);
+      variant.math = `${a}(x - ${b}) = ${c}x ${sign} ${absD}`;
+      variant.answer = ans;
+      break;
+    }
+    case 24: { // 0.Ax - 0.B = 0.C
+      const a = randInt(2, 6);
+      const ans = randInt(2, 7);
+      const b = randInt(2, 9);
+      const c = a * ans - b;
+      if (c <= 0) {
+        variant.math = `0.3x - 0.6 = 0.9`;
+        variant.answer = 5;
+      } else {
+        variant.math = `0.${a}x - 0.${b} = 0.${c}`;
+        variant.answer = ans;
+      }
+      break;
+    }
+  }
+  return variant;
+}
+
 let countdownInterval = null;
 
 function triggerQuiz(category) {
@@ -1154,8 +1385,9 @@ function triggerQuiz(category) {
     unusedPool = pool;
   }
 
-  activeQuiz = unusedPool[Math.floor(Math.random() * unusedPool.length)] || pool[0];
-  usedQuestionIds.push(activeQuiz.id);
+  const templateQuiz = unusedPool[Math.floor(Math.random() * unusedPool.length)] || pool[0];
+  activeQuiz = generateQuestionVariant(templateQuiz);
+  usedQuestionIds.push(templateQuiz.id);
 
   document.getElementById('quiz-category').innerText = activeQuiz.category;
   document.getElementById('quiz-question-text').innerText = activeQuiz.question;
