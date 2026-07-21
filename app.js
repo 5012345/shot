@@ -30,14 +30,16 @@ const CONFIG = {
   gasUrl: 'https://script.google.com/macros/s/AKfycbz_Placeholder/exec', // GAS URL
 };
 
-// Firebase 초기화 설정
-const firebaseConfig = {
-  databaseURL: ""
-};
+// Firebase 초기화 설정 (fireconfig.js에서 정의하지 않았을 경우의 fallback)
+if (typeof firebaseConfig === 'undefined') {
+  window.firebaseConfig = {
+    databaseURL: ""
+  };
+}
 
 let db = null;
 try {
-  if (firebaseConfig.databaseURL) {
+  if (firebaseConfig && firebaseConfig.databaseURL && !firebaseConfig.databaseURL.includes("YOUR_PROJECT_ID")) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
   }
